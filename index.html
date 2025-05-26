@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAINEL LIGA / DESLIGA UBS</title>
+  <meta name="description" content="Interactive facility control panel for equipment management.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
+  <meta name="theme-color" content="#2962FF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="LIGA DESLIGA UBS">
+  <meta name="format-detection" content="telephone=no">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+    :root {
+      --background: 216 93% 95%; /* Light, desaturated blue (#E8F0FE) */
+      --foreground: 222 84% 5%; /* Dark blue for text, for better contrast on light blue */
+
+      --card: 0 0% 100%;
+      --card-foreground: 222 84% 5%;
+
+      --popover: 0 0% 100%;
+      --popover-foreground: 222 84% 5%;
+
+      --primary: 225 100% 58%; /* Strong blue (#2962FF) */
+      --primary-foreground: 0 0% 98%; /* White text on strong blue */
+
+      --secondary: 210 40% 96.1%; /* Light gray */
+      --secondary-foreground: 222 47% 11.2%; /* Dark text on light gray */
+
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215 20.2% 65.1%;
+
+      --accent: 267 100% 63%; /* Purple (#9747FF) for selected/active */
+      --accent-foreground: 0 0% 98%; /* White text on purple */
+
+      --destructive: 0 84.2% 60.2%; /* Red */
+      --destructive-foreground: 0 0% 98%; /* White text on red */
+
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 225 100% 58%; /* Ring color to primary */
+
+      --radius: 0.5rem;
+    }
+
+    body {
+      font-family: 'Geist', sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      text-align: center;
+      color: hsl(var(--primary));
+      margin-bottom: 30px;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Adjusted min width for smaller screens */
+      gap: 15px; /* Reduced gap slightly */
+      margin-top: 20px;
+    }
+
+    .facility-button {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border: none;
+      padding: 20px 15px; /* Increased vertical padding */
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 1rem; /* Relative font size */
+      font-weight: 500;
+      transition: all 0.2s ease-in-out;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
+    }
+
+    .facility-button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px); /* Subtle hover effect */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .facility-button:active {
+      transform: translateY(0); /* Reset on click */
+      box-shadow: none;
+    }
+
+    .facility-button[data-state='correct'] {
+      background-color: #4CAF50; /* Green */
+    }
+
+    .facility-button[data-state='wrong'] {
+      background-color: #f44336; /* Red */
+    }
+
+    .feedback {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 1.1rem; /* Relative font size */
+      font-weight: 600;
+      min-height: 1.5em; /* Reserve space to prevent layout shifts */
+    }
+
+    .mode-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .mode-button {
+      background-color: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 1rem; /* Relative font size */
+      transition: all 0.2s ease-in-out;
+    }
+
+    .mode-button:hover {
+       background-color: hsl(var(--secondary) / 0.8);
+    }
+
+    .mode-button.active {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .mode-button.active:hover {
+       background-color: hsl(var(--primary) / 0.9);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: hsl(var(--foreground)); /* Dark background for toast */
+      color: hsl(var(--background)); /* Light text for toast */
+      padding: 15px 25px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      display: none;
+      z-index: 1000; /* Ensure toast is on top */
+      font-size: 1rem;
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideIn 0.3s ease forwards;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      .button-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Further adjust for small screens */
+        gap: 10px;
+      }
+
+      .facility-button {
+        padding: 15px 10px;
+        font-size: 0.9rem;
+      }
+
+      .mode-button {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+      }
+
+      .feedback {
+        font-size: 1rem;
+      }
+
+      .toast {
+        bottom: 10px;
+        right: 10px;
+        left: 10px; /* Make toast full width on small screens */
+        text-align: center;
+        padding: 10px 15px;
+      }
+
+      @keyframes slideIn {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PAINEL LIGA / DESLIGA UBS</h1> <!-- Added a title -->
+    <div class="mode-buttons">
+      <button class="mode-button active" data-mode="ligar">LIGAR</button>
+      <button class="mode-button" data-mode="desligar">DESLIGAR</button>
+    </div>
+    <div class="feedback">Clique nos botões na sequência correta para LIGAR.</div>
+    <div class="button-grid" id="buttonGrid"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const CORRECT_SEQUENCE_LIGAR_IDS = [
+      'elev-imp-01', 'exaustor-1', 'exaustor-2', 'elev-imp-03',
+      'elev-class-1', 'elev-class-2', 'classificador-1', 'classificador-2',
+      'elev-imp-02', 'elev-titanic', 'turbina-1', 'turbina-2',
+      'aspirador-1', 'aspirador-2', 'mesa-titanic', 'correia-titanic',
+      'reg-balao-titanic'
+    ];
+
+    const CORRECT_SEQUENCE_DESLIGAR_IDS = [
+      'reg-balao-titanic', 'correia-titanic', 'mesa-titanic',
+      'aspirador-1', 'aspirador-2', 'turbina-1', 'turbina-2',
+      'elev-titanic', 'elev-imp-02', 'classificador-1', 'classificador-2',
+      'elev-class-1', 'elev-class-2', 'elev-imp-03',
+      'exaustor-1', 'exaustor-2', 'elev-imp-01'
+    ];
+
+    const INITIAL_BUTTONS = [
+      { id: 'elev-imp-01', label: 'Elevador Impureza 01' },
+      { id: 'exaustor-1', label: 'Exaustor 1' },
+      { id: 'exaustor-2', label: 'Exaustor 2' },
+      { id: 'elev-imp-03', label: 'Elevador Impureza 03' },
+      { id: 'elev-class-1', label: 'Elevador Classificador 1' },
+      { id: 'elev-class-2', label: 'Elevador Classificador 2' },
+      { id: 'classificador-1', label: 'Classificador 1' },
+      { id: 'classificador-2', label: 'Classificador 2' },
+      { id: 'elev-imp-02', label: 'Elevador Impureza 02' },
+      { id: 'elev-titanic', label: 'Elevador Titanic' },
+      { id: 'turbina-1', label: 'Turbina 1' },
+      { id: 'turbina-2', label: 'Turbina 2' },
+      { id: 'aspirador-1', label: 'Aspirador 1' },
+      { id: 'aspirador-2', label: 'Aspirador 2' },
+      { id: 'mesa-titanic', label: 'Mesa Titanic' },
+      { id: 'correia-titanic', label: 'Correia Titanic' },
+      { id: 'reg-balao-titanic', label: 'Registro Balão Titanic' }
+    ];
+
+    let currentMode = 'ligar';
+    let currentSequenceIndex = 0;
+    let isGameWon = false;
+
+    function shuffleArray(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    }
+
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    function resetGame(newMode) {
+      currentMode = newMode || currentMode;
+      currentSequenceIndex = 0;
+      isGameWon = false;
+      const modeText = currentMode === 'ligar' ? 'LIGAR' : 'DESLIGAR';
+      document.querySelector('.feedback').textContent = 
+        `Clique nos botões na sequência correta para ${modeText}.`;
+      
+      const buttons = document.querySelectorAll('.facility-button');
+      buttons.forEach(button => {
+        button.dataset.state = 'default';
+      });
+
+      initializeButtons();
+    }
+
+    function handleButtonClick(button) {
+      if (isGameWon) return;
+
+      const correctSequence = currentMode === 'ligar' 
+        ? CORRECT_SEQUENCE_LIGAR_IDS 
+        : CORRECT_SEQUENCE_DESLIGAR_IDS;
+
+      if (button.id === correctSequence[currentSequenceIndex]) {
+        button.dataset.state = 'correct';
+        currentSequenceIndex++;
+
+        if (currentSequenceIndex === correctSequence.length) {
+          isGameWon = true;
+          showToast('Parabéns! Você completou a sequência corretamente!');
+          document.querySelector('.feedback').textContent = 
+            'Sequência completa! Clique em LIGAR ou DESLIGAR para jogar novamente.';
+        }
+      } else {
+        button.dataset.state = 'wrong';
+        setTimeout(() => {
+          resetGame();
+        }, 1000);
+        showToast('Sequência incorreta! Tente novamente.');
+      }
+    }
+
+    function initializeButtons() {
+      const buttonGrid = document.getElementById('buttonGrid');
+      buttonGrid.innerHTML = '';
+      
+      const shuffledButtons = shuffleArray(INITIAL_BUTTONS);
+      
+      shuffledButtons.forEach(buttonData => {
+        const button = document.createElement('button');
+        button.className = 'facility-button';
+        button.id = buttonData.id;
+        button.textContent = buttonData.label;
+        button.dataset.state = 'default';
+        button.onclick = () => handleButtonClick(button);
+        buttonGrid.appendChild(button);
+      });
+    }
+
+    document.querySelectorAll('.mode-button').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.mode-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        button.classList.add('active');
+        resetGame(button.dataset.mode);
+      });
+    });
+
+    // Initialize the game
+    initializeButtons();
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
